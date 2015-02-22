@@ -213,7 +213,10 @@ class FormForForm(forms.ModelForm):
             field_key = field.slug
             value = self.cleaned_data[field_key]
             if value and self.fields[field_key].widget.needs_multipart_form:
-                value = fs.save(join("forms", str(uuid4()), value.name), value)
+                if hasattr(self.fields[field_key], 'storage'):
+                    value = self.fields[field_key].storage.save(join("amazonfiles", str(uuid4()), value.name), value)
+                else:
+                    value = fs.save(join("files", str(uuid4()), value.name), value)
             if isinstance(value, list):
                 value = ", ".join([v.strip() for v in value])
             if field.id in entry_fields:
@@ -360,7 +363,7 @@ class EntriesForm(forms.Form):
         for field in self.form_fields:
             if self.posted_data("field_%s_export" % field.id):
                 field_indexes[field.id] = len(field_indexes)
-                if field.is_a(fields.FILE):
+                if field.is_a(fields.FILE) or field.is_a(104):
                     file_field_ids.append(field.id)
                 elif field.is_a(*fields.DATES):
                     date_field_ids.append(field.id)

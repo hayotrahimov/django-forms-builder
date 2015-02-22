@@ -9,11 +9,11 @@ from io import BytesIO, StringIO
 
 from django.conf.urls import patterns, url
 from django.contrib import admin
-from django.core.files.storage import FileSystemStorage
+from django.core.files.storage import FileSystemStorage, default_storage
 from django.core.urlresolvers import reverse
 from django.db.models import Count
 from django.http import HttpResponse, HttpResponseRedirect
-from django.shortcuts import render_to_response, get_object_or_404
+from django.shortcuts import render_to_response, get_object_or_404, redirect
 from django.template import RequestContext
 from django.utils.translation import ungettext, ugettext_lazy as _
 
@@ -191,8 +191,14 @@ class FormAdmin(admin.ModelAdmin):
         """
         model = self.fieldentry_model
         field_entry = get_object_or_404(model, id=field_entry_id)
-        path = join(fs.location, field_entry.value)
-        response = HttpResponse(mimetype=guess_type(path)[0])
+        if field_entry and 'amazonfiles' in field_entry.value:
+            path = "/404.html"
+            if default_storage and hasattr(default_storage, 'url'):
+                path = default_storage.url(field_entry.value)
+            return redirect(path)
+        else:
+            path = join(fs.location, field_entry.value)
+        response = HttpResponse(content_type=guess_type(path)[0])
         f = open(path, "r+b")
         response["Content-Disposition"] = "attachment; filename=%s" % f.name
         response.write(f.read())
